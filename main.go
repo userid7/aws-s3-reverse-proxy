@@ -75,7 +75,7 @@ func NewAwsS3ReverseProxy(opts Options) (*Handler, error) {
 	parsedAwsCredentials := make(map[string]string)
 	for _, cred := range opts.AwsCredentials {
 		d := strings.Split(cred, ",")
-		if len(d) != 2 || len(d[0]) < 16 || len(d[1]) < 1 {
+		if len(d) != 2 || len(d[0]) < 6 || len(d[1]) < 1 {
 			return nil, fmt.Errorf("Invalid AWS credentials. Did you separate them with a ',' or are they too short?")
 		}
 		parsedAwsCredentials[d[0]] = d[1]

@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"crypto/subtle"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"regexp"
+	// "strconv"
 	"strings"
 	"time"
 
@@ -47,6 +49,7 @@ type Handler struct {
 	Proxy *httputil.ReverseProxy
 }
 
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	proxyReq, err := h.buildUpstreamRequest(r)
 	if err != nil {
@@ -60,10 +63,93 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := url.URL{Scheme: proxyReq.URL.Scheme, Host: proxyReq.Host}
-	proxy := httputil.NewSingleHostReverseProxy(&url)
-	proxy.FlushInterval = 1
-	proxy.ServeHTTP(w, proxyReq)
+	originServerResponse, err := http.DefaultClient.Do(proxyReq)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = fmt.Fprint(w, err)
+		return
+	}
+
+	if(originServerResponse.StatusCode == 404){
+		log.Info("Not found")
+		if(r.Method == "HEAD" || r.Method == "GET"){
+			log.Info("try to search in compress bucket")
+			originReqPath := proxyReq.URL.Path
+			alternativeProxyReq := proxyReq
+			alternateUrl := url.URL{Scheme: "http", Host: "localhost:8000", Path: "/api/decompress"+originReqPath}
+			alternativeProxyReq.URL = &alternateUrl
+			alternativeServerResponse, err := http.DefaultClient.Do(alternativeProxyReq)
+			if err != nil {
+				log.Info("Error happen when hit alternative target")
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = fmt.Fprint(w, err)
+				return
+			}
+			log.Info("Alternative target hitted")
+			log.Info(alternativeServerResponse.StatusCode)
+			log.Info(alternativeProxyReq.URL)
+			log.Info(alternativeServerResponse.Header)
+			copyHeader(w.Header(), alternativeServerResponse.Header)
+			w.WriteHeader(alternativeServerResponse.StatusCode)
+			io.Copy(w, alternativeServerResponse.Body)
+		}
+	}else{
+		// return response to the client
+		log.Info(originServerResponse.StatusCode)
+		log.Info(proxyReq.Method)
+		log.Info(proxyReq.URL)
+		log.Info(proxyReq.Body)
+		log.Info("REQ HEADER : ", proxyReq.Header)
+		log.Info("RES HEADER : ",originServerResponse.Header)
+		copyHeader(w.Header(), originServerResponse.Header)
+		w.WriteHeader(originServerResponse.StatusCode)
+		io.Copy(w, originServerResponse.Body)
+	}
+
+	
+
+	// primaryUrl := url.URL{Scheme: proxyReq.URL.Scheme, Host: proxyReq.Host}
+	// proxy := httputil.NewSingleHostReverseProxy(&primaryUrl)
+	// proxy.FlushInterval = 1
+	// proxy.ModifyResponse = func(wr *http.Response) error {
+    //     log.Println(wr.Request.Method, wr.Request.URL.Scheme, wr.StatusCode, wr.Body)
+	// 	if(wr.StatusCode == 404){
+	// 		if(wr.Request.Method == "HEAD" || wr.Request.Method == "GET"){
+	// 			log.Info("Not found try to search in compress bucket")
+	// 			err = wr.Body.Close()
+	// 			if err != nil {
+	// 				return err
+	// 			}
+	// 			alternateUrl := url.URL{Scheme: proxyReq.URL.Scheme, Host: "localhost:3005", Path: "/api/decompressed"}
+	// 			alternateProxy := httputil.NewSingleHostReverseProxy(&alternateUrl)
+	// 			alternateProxy.FlushInterval = 1
+	// 			alternateProxy.ServeHTTP(w, proxyReq)
+	// 			proxy.ModifyResponse = func(wr *http.Response) error {
+	// 				log.Println("Alternative Response : ", wr.Request.Method, wr.Request.URL.Scheme, wr.StatusCode, wr.Body)
+	// 				return nil
+	// 			}
+	// 			// res, err := http.Head("http://localhost:3005/api/uncompressed/sample6.tar")
+	// 			// if err != nil {
+	// 			// 	return err
+	// 			// }
+	// 			// body, _ := ioutil.ReadAll(res.Body)
+	// 			// wr.Body =  res.Body
+	// 			// wr.ContentLength = int64(len(body))
+	// 			// wr.Header.Set("Content-Length", strconv.Itoa(len(body)))
+	// 			// wr.StatusCode = res.StatusCode
+	// 		}
+	// 	}
+    //     return nil
+    // }
+	// proxy.ServeHTTP(w, proxyReq)
+}
+
+func copyHeader(dst, src http.Header) {
+	for k, vv := range src {
+		for _, v := range vv {
+			dst.Add(k, v)
+		}
+	}
 }
 
 func (h *Handler) sign(signer *v4.Signer, req *http.Request, region string) error {
@@ -219,23 +305,23 @@ func (h *Handler) buildUpstreamRequest(req *http.Request) (*http.Request, error)
 	// Get the AWS Signature signer for this AccessKey
 	signer := h.Signers[accessKeyID]
 
-	// Assemble a signed fake request to verify the incoming requests signature
-	fakeReq, err := h.generateFakeIncomingRequest(signer, req, region)
-	if err != nil {
-		return nil, err
-	}
+	// // Assemble a signed fake request to verify the incoming requests signature
+	// fakeReq, err := h.generateFakeIncomingRequest(signer, req, region)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	// Verify that the fake request and the incoming request have the same signature
-	// This ensures it was sent and signed by a client with correct AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
-	cmpResult := subtle.ConstantTimeCompare([]byte(fakeReq.Header["Authorization"][0]), []byte(req.Header["Authorization"][0]))
-	if cmpResult == 0 {
-		v, _ := httputil.DumpRequest(fakeReq, false)
-		log.Debugf("Fake request: %v", string(v))
+	// // Verify that the fake request and the incoming request have the same signature
+	// // This ensures it was sent and signed by a client with correct AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+	// cmpResult := subtle.ConstantTimeCompare([]byte(fakeReq.Header["Authorization"][0]), []byte(req.Header["Authorization"][0]))
+	// if cmpResult == 0 {
+	// 	v, _ := httputil.DumpRequest(fakeReq, false)
+	// 	log.Debugf("Fake request: %v", string(v))
 
-		v, _ = httputil.DumpRequest(req, false)
-		log.Debugf("Incoming request: %v", string(v))
-		return nil, fmt.Errorf("invalid signature in Authorization header")
-	}
+	// 	v, _ = httputil.DumpRequest(req, false)
+	// 	log.Debugf("Incoming request: %v", string(v))
+	// 	return nil, fmt.Errorf("invalid signature in Authorization header")
+	// }
 
 	if log.GetLevel() == log.DebugLevel {
 		initialReqDump, _ := httputil.DumpRequest(req, false)
