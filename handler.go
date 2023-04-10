@@ -11,12 +11,15 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"regexp"
+
 	// "strconv"
 	"strings"
 	"time"
 
 	v4 "github.com/aws/aws-sdk-go/aws/signer/v4"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/ucarion/urlpath"
 )
 
 var awsAuthorizationCredentialRegexp = regexp.MustCompile("Credential=([a-zA-Z0-9]+)/[0-9]+/([a-z]+-?[a-z]+-?[0-9]+)/s3/aws4_request")
@@ -33,6 +36,9 @@ type Handler struct {
 	// Upstream S3 endpoint URL
 	UpstreamEndpoint string
 
+	// Upstream S3 endpoint URL
+	UpstreamEndpointAlternative string
+
 	// Allowed endpoint, i.e., Host header to accept incoming requests from
 	AllowedSourceEndpoint string
 
@@ -48,7 +54,6 @@ type Handler struct {
 	// Reverse Proxy
 	Proxy *httputil.ReverseProxy
 }
-
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	proxyReq, err := h.buildUpstreamRequest(r)
@@ -70,14 +75,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if(originServerResponse.StatusCode == 404){
+	if checkIfGetObjectUrl(proxyReq.URL) && originServerResponse.StatusCode == 404 {
 		log.Info("Not found")
-		if(r.Method == "HEAD" || r.Method == "GET"){
+		if r.Method == "HEAD" || r.Method == "GET" {
 			log.Info("try to search in compress bucket")
 			originReqPath := proxyReq.URL.Path
 			alternativeProxyReq := proxyReq
-			alternateUrl := url.URL{Scheme: "http", Host: "localhost:8000", Path: "/api/decompress"+originReqPath}
+			alternateUrl := url.URL{Scheme: "http", Host: h.UpstreamEndpointAlternative, Path: "/api/decompress" + originReqPath}
 			alternativeProxyReq.URL = &alternateUrl
+
 			alternativeServerResponse, err := http.DefaultClient.Do(alternativeProxyReq)
 			if err != nil {
 				log.Info("Error happen when hit alternative target")
@@ -85,63 +91,57 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				_, _ = fmt.Fprint(w, err)
 				return
 			}
+
 			log.Info("Alternative target hitted")
 			log.Info(alternativeServerResponse.StatusCode)
+
+			log.Info(alternativeProxyReq.Method)
 			log.Info(alternativeProxyReq.URL)
+			log.Info(alternativeProxyReq.Body)
+
 			log.Info(alternativeServerResponse.Header)
+
 			copyHeader(w.Header(), alternativeServerResponse.Header)
 			w.WriteHeader(alternativeServerResponse.StatusCode)
 			io.Copy(w, alternativeServerResponse.Body)
 		}
-	}else{
+	} else {
 		// return response to the client
 		log.Info(originServerResponse.StatusCode)
 		log.Info(proxyReq.Method)
 		log.Info(proxyReq.URL)
 		log.Info(proxyReq.Body)
+
 		log.Info("REQ HEADER : ", proxyReq.Header)
-		log.Info("RES HEADER : ",originServerResponse.Header)
+		log.Info("RES HEADER : ", originServerResponse.Header)
+
 		copyHeader(w.Header(), originServerResponse.Header)
 		w.WriteHeader(originServerResponse.StatusCode)
 		io.Copy(w, originServerResponse.Body)
 	}
+}
 
-	
+func checkIfGetObjectUrl(url *url.URL) bool {
+	var getObjectPath = urlpath.New("/:bucket/*")
 
-	// primaryUrl := url.URL{Scheme: proxyReq.URL.Scheme, Host: proxyReq.Host}
-	// proxy := httputil.NewSingleHostReverseProxy(&primaryUrl)
-	// proxy.FlushInterval = 1
-	// proxy.ModifyResponse = func(wr *http.Response) error {
-    //     log.Println(wr.Request.Method, wr.Request.URL.Scheme, wr.StatusCode, wr.Body)
-	// 	if(wr.StatusCode == 404){
-	// 		if(wr.Request.Method == "HEAD" || wr.Request.Method == "GET"){
-	// 			log.Info("Not found try to search in compress bucket")
-	// 			err = wr.Body.Close()
-	// 			if err != nil {
-	// 				return err
-	// 			}
-	// 			alternateUrl := url.URL{Scheme: proxyReq.URL.Scheme, Host: "localhost:3005", Path: "/api/decompressed"}
-	// 			alternateProxy := httputil.NewSingleHostReverseProxy(&alternateUrl)
-	// 			alternateProxy.FlushInterval = 1
-	// 			alternateProxy.ServeHTTP(w, proxyReq)
-	// 			proxy.ModifyResponse = func(wr *http.Response) error {
-	// 				log.Println("Alternative Response : ", wr.Request.Method, wr.Request.URL.Scheme, wr.StatusCode, wr.Body)
-	// 				return nil
-	// 			}
-	// 			// res, err := http.Head("http://localhost:3005/api/uncompressed/sample6.tar")
-	// 			// if err != nil {
-	// 			// 	return err
-	// 			// }
-	// 			// body, _ := ioutil.ReadAll(res.Body)
-	// 			// wr.Body =  res.Body
-	// 			// wr.ContentLength = int64(len(body))
-	// 			// wr.Header.Set("Content-Length", strconv.Itoa(len(body)))
-	// 			// wr.StatusCode = res.StatusCode
-	// 		}
-	// 	}
-    //     return nil
-    // }
-	// proxy.ServeHTTP(w, proxyReq)
+	// log.Info(url.Path)
+
+	match, ok := getObjectPath.Match(url.Path)
+	if !ok {
+		return false
+	}
+
+	// if match.Params["bucket"] == "" || match.Params["key"] == "" {
+	if match.Params["bucket"] == "" {
+		return false
+	}
+
+	values := url.Query()
+	for range values {
+		return false
+	}
+
+	return true
 }
 
 func copyHeader(dst, src http.Header) {

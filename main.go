@@ -18,18 +18,19 @@ import (
 
 // Options for aws-s3-reverse-proxy command line arguments
 type Options struct {
-	Debug                 bool
-	ListenAddr            string
-	MetricsListenAddr     string
-	PprofListenAddr       string
-	AllowedSourceEndpoint string
-	AllowedSourceSubnet   []string
-	AwsCredentials        []string
-	Region                string
-	UpstreamInsecure      bool
-	UpstreamEndpoint      string
-	CertFile              string
-	KeyFile               string
+	Debug                       bool
+	ListenAddr                  string
+	MetricsListenAddr           string
+	PprofListenAddr             string
+	AllowedSourceEndpoint       string
+	AllowedSourceSubnet         []string
+	AwsCredentials              []string
+	Region                      string
+	UpstreamInsecure            bool
+	UpstreamEndpoint            string
+	UpstreamEndpointAlternative string
+	CertFile                    string
+	KeyFile                     string
 }
 
 // NewOptions defines and parses the raw command line arguments
@@ -45,6 +46,7 @@ func NewOptions() Options {
 	kingpin.Flag("aws-region", "send requests to this AWS S3 region (env - AWS_REGION)").Envar("AWS_REGION").Default("eu-central-1").StringVar(&opts.Region)
 	kingpin.Flag("upstream-insecure", "use insecure HTTP for upstream connections (env - UPSTREAM_INSECURE)").Envar("UPSTREAM_INSECURE").BoolVar(&opts.UpstreamInsecure)
 	kingpin.Flag("upstream-endpoint", "use this S3 endpoint for upstream connections, instead of public AWS S3 (env - UPSTREAM_ENDPOINT)").Envar("UPSTREAM_ENDPOINT").StringVar(&opts.UpstreamEndpoint)
+	kingpin.Flag("upstream-endpoint-alternative", "use this S3 endpoint for upstream connections, instead of public AWS S3 (env - UPSTREAM_ENDPOINT)").Envar("UPSTREAM_ENDPOINT_ALTERNATIVE").StringVar(&opts.UpstreamEndpointAlternative)
 	kingpin.Flag("cert-file", "path to the certificate file (env - CERT_FILE)").Envar("CERT_FILE").Default("").StringVar(&opts.CertFile)
 	kingpin.Flag("key-file", "path to the private key file (env - KEY_FILE)").Envar("KEY_FILE").Default("").StringVar(&opts.KeyFile)
 	kingpin.Parse()
@@ -90,13 +92,14 @@ func NewAwsS3ReverseProxy(opts Options) (*Handler, error) {
 	}
 
 	handler := &Handler{
-		Debug:                 opts.Debug,
-		UpstreamScheme:        scheme,
-		UpstreamEndpoint:      opts.UpstreamEndpoint,
-		AllowedSourceEndpoint: opts.AllowedSourceEndpoint,
-		AllowedSourceSubnet:   parsedAllowedSourceSubnet,
-		AWSCredentials:        parsedAwsCredentials,
-		Signers:               signers,
+		Debug:                       opts.Debug,
+		UpstreamScheme:              scheme,
+		UpstreamEndpoint:            opts.UpstreamEndpoint,
+		UpstreamEndpointAlternative: opts.UpstreamEndpointAlternative,
+		AllowedSourceEndpoint:       opts.AllowedSourceEndpoint,
+		AllowedSourceSubnet:         parsedAllowedSourceSubnet,
+		AWSCredentials:              parsedAwsCredentials,
+		Signers:                     signers,
 	}
 	return handler, nil
 }

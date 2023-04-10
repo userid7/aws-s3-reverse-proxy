@@ -249,3 +249,28 @@ func TestHandlerPassCustomHeaders(t *testing.T) {
 	assert.Equal(t, 200, resp.Code)
 	assert.Contains(t, strings.TrimSpace(resp.Body.String()), "ok")
 }
+
+func TestCheckGetObjectUrl(t *testing.T) {
+	type testSheet struct {
+		url  string
+		isOk bool
+	}
+
+	urls := []testSheet{
+		{"http://s3.amazon.com/bucket/key", true},
+		{"http://s3.amazon.com/bucket/path/key", true},
+		{"http://s3.amazon.com/bucket/path/key?list-type=2", false},
+		{"http://s3.amazon.com/bucket/?list-type=2", false},
+		{"http://s3.amazon.com/bucket/key?PartNumber=PartNumber&VersionId=VersionId", false},
+	}
+
+	for _, ur := range urls {
+		u, err := url.Parse(ur.url)
+		if err != nil {
+			assert.Error(t, err)
+		}
+		checkResult := checkIfGetObjectUrl(u)
+		assert.Equal(t, ur.isOk, checkResult)
+	}
+
+}
