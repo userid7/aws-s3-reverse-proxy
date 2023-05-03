@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	v4 "github.com/aws/aws-sdk-go/aws/signer/v4"
 	log "github.com/sirupsen/logrus"
+	"github.com/joho/godotenv"
+
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -102,6 +104,11 @@ func NewAwsS3ReverseProxy(opts Options) (*Handler, error) {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file: ", err)
+	}
+
 	opts := NewOptions()
 	handler, err := NewAwsS3ReverseProxy(opts)
 	if err != nil {
