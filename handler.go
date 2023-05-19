@@ -10,7 +10,9 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"regexp"
+
 	// "strconv"
 	"strings"
 	"time"
@@ -50,6 +52,22 @@ type Handler struct {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Info("METHOD : ", r.Method)
+	log.Info("URL PATH : ", r.URL.Path)
+	log.Info("HEADER : ", r.Header)
+
+	//Read the content
+	rawBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Error("unable to proxy request")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	_ = os.WriteFile("./raw.tar", rawBody, 0644)
+
+	// Restore the io.ReadCloser to it's original state
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(rawBody))
+
 	proxyReq, err := h.buildUpstreamRequest(r)
 	if err != nil {
 		log.WithError(err).Error("unable to proxy request")
@@ -62,11 +80,45 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Info("HEADER PROXY : ", proxyReq.Header)
+
+	//Read the content
+	proxyBody, err := ioutil.ReadAll(proxyReq.Body)
+	if err != nil {
+		log.WithError(err).Error("unable to proxy request")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	_ = os.WriteFile("./proxy.tar", proxyBody, 0644)
+
+	// Restore the io.ReadCloser to it's original state
+	proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(proxyBody))
+
+	isBodyEqual := bytes.Equal(rawBody, proxyBody)
+	log.Info("Is body equal? ", isBodyEqual)
+
+	if !checkIfObjectEndpoint(proxyReq.URL.Path) {
+		log.Info("Direct Proxy to Object Storage")
+		originServerResponse, err := http.DefaultClient.Do(proxyReq)
+		if err != nil {
+			log.WithError(err).Error("pproxy failed")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = fmt.Fprint(w, err)
+			return
+		}
+
+		copyHeader(w.Header(), originServerResponse.Header)
+		w.WriteHeader(originServerResponse.StatusCode)
+		io.Copy(w, originServerResponse.Body)
+		return
+	}
+
+	// Redirecting object endpoint
 	if r.Method == "HEAD" || r.Method == "GET" {
 		log.Info("try to search in compress bucket")
 		originReqPath := proxyReq.URL.Path
 		alternativeProxyReq := proxyReq
-		alternateUrl := url.URL{Scheme: "http", Host: "localhost:3015", Path: "/api/decompress" + originReqPath}
+		alternateUrl := url.URL{Scheme: "http", Host: "localhost:3015", Path: "/api/v1/decompress" + originReqPath}
 		alternativeProxyReq.URL = &alternateUrl
 		alternativeServerResponse, err := http.DefaultClient.Do(alternativeProxyReq)
 		if err != nil {
@@ -75,13 +127,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_, _ = fmt.Fprint(w, err)
 			return
 		}
-		log.Info("Alternative target hitted")
-		log.Info(alternativeServerResponse.StatusCode)
-		log.Info(alternativeProxyReq.Method)
-		log.Info(alternativeProxyReq.URL)
-		log.Info(alternativeServerResponse.Header)
-		log.Info("REQ HEADER : ", alternativeProxyReq.Header)
-		log.Info("RES HEADER : ", alternativeServerResponse.Header)
+		// log.Info("Alternative target hitted")
+		// log.Info(alternativeServerResponse.StatusCode)
+		// log.Info(alternativeProxyReq.Method)
+		// log.Info(alternativeProxyReq.URL)
+		// log.Info(alternativeServerResponse.Header)
+		// log.Info("REQ HEADER : ", alternativeProxyReq.Header)
+		// log.Info("RES HEADER : ", alternativeServerResponse.Header)
+
 		copyHeader(w.Header(), alternativeServerResponse.Header)
 		w.WriteHeader(alternativeServerResponse.StatusCode)
 		io.Copy(w, alternativeServerResponse.Body)
@@ -95,12 +148,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// return response to the client
-		log.Info(originServerResponse.StatusCode)
-		log.Info(proxyReq.Method)
-		log.Info(proxyReq.URL)
-		log.Info(proxyReq.Body)
-		log.Info("REQ HEADER : ", proxyReq.Header)
-		log.Info("RES HEADER : ", originServerResponse.Header)
+		// log.Info(originServerResponse.StatusCode)
+		// log.Info(proxyReq.Method)
+		// log.Info(proxyReq.URL)
+		// log.Info(proxyReq.Body)
+		// log.Info("REQ HEADER : ", proxyReq.Header)
+		// log.Info("RES HEADER : ", originServerResponse.Header)
+
 		copyHeader(w.Header(), originServerResponse.Header)
 		w.WriteHeader(originServerResponse.StatusCode)
 		io.Copy(w, originServerResponse.Body)
@@ -109,7 +163,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		queryParam := proxyReq.URL.Query()
 		if originServerResponse.StatusCode == 200 && ((proxyReq.Method == "PUT" && queryParam.Get("partNumber") == "") || (proxyReq.Method == "POST" && queryParam.Get("uploadId") != "")) {
 			log.Info("Trigger webhook compress endpoint")
-			_, err := http.Get("http://localhost:3015/api/compress" + proxyReq.URL.Path)
+			_, err := http.Get("http://localhost:3015/api/v1/compress" + proxyReq.URL.Path)
 			if err != nil {
 				log.Info("Error happen when hit webhook endpoint")
 				log.Info(err)
@@ -125,6 +179,14 @@ func copyHeader(dst, src http.Header) {
 			dst.Add(k, v)
 		}
 	}
+}
+
+func checkIfObjectEndpoint(urlPath string) bool {
+	p := strings.Split(urlPath, "/")
+	if len(p) != 3 {
+		return false
+	}
+	return p[1] != "" && p[2] != ""
 }
 
 func (h *Handler) sign(signer *v4.Signer, req *http.Request, region string) error {
@@ -181,9 +243,9 @@ func (h *Handler) validateIncomingHeaders(req *http.Request) (string, string, er
 		return "", "", fmt.Errorf("Authorization header missing or set multiple times: %v", req)
 	}
 	match := awsAuthorizationCredentialRegexp.FindStringSubmatch(authorizationHeader[0])
-	if len(match) != 3 {
-		return "", "", fmt.Errorf("invalid Authorization header: Credential not found: %v", req)
-	}
+	// if len(match) != 3 {
+	// 	return "", "", fmt.Errorf("invalid Authorization header: Credential not found: %v", req)
+	// }
 	receivedAccessKeyID := match[1]
 	region := match[2]
 
