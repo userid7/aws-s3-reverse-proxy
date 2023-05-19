@@ -21,7 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var awsAuthorizationCredentialRegexp = regexp.MustCompile("Credential=([a-zA-Z0-9]+)/[0-9]+/([a-z]+-?[a-z]+-?[0-9]+)/s3/aws4_request")
+var awsAuthorizationCredentialRegexp = regexp.MustCompile("Credential=(.{3,})/[0-9]+/([a-z]+-?[a-z]+-?[0-9]+)/s3/aws4_request")
 var awsAuthorizationSignedHeadersRegexp = regexp.MustCompile("SignedHeaders=([a-zA-Z0-9;-]+)")
 
 // Handler is a special handler that re-signs any AWS S3 request and sends it upstream
@@ -54,7 +54,7 @@ type Handler struct {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Info("METHOD : ", r.Method)
 	log.Info("URL PATH : ", r.URL.Path)
-	log.Info("HEADER : ", r.Header)
+	// log.Info("HEADER : ", r.Header)
 
 	//Read the content
 	rawBody, err := ioutil.ReadAll(r.Body)
@@ -80,7 +80,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("HEADER PROXY : ", proxyReq.Header)
+	// log.Info("HEADER PROXY : ", proxyReq.Header)
 
 	//Read the content
 	proxyBody, err := ioutil.ReadAll(proxyReq.Body)
@@ -118,7 +118,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Info("try to search in compress bucket")
 		originReqPath := proxyReq.URL.Path
 		alternativeProxyReq := proxyReq
-		alternateUrl := url.URL{Scheme: "http", Host: "localhost:3015", Path: "/api/v1/decompress" + originReqPath}
+		alternateUrl := url.URL{Scheme: "http", Host: "192.168.1.247:3015", Path: "/api/v1/decompress" + originReqPath}
 		alternativeProxyReq.URL = &alternateUrl
 		alternativeServerResponse, err := http.DefaultClient.Do(alternativeProxyReq)
 		if err != nil {
@@ -127,6 +127,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_, _ = fmt.Fprint(w, err)
 			return
 		}
+
 		// log.Info("Alternative target hitted")
 		// log.Info(alternativeServerResponse.StatusCode)
 		// log.Info(alternativeProxyReq.Method)
@@ -163,7 +164,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		queryParam := proxyReq.URL.Query()
 		if originServerResponse.StatusCode == 200 && ((proxyReq.Method == "PUT" && queryParam.Get("partNumber") == "") || (proxyReq.Method == "POST" && queryParam.Get("uploadId") != "")) {
 			log.Info("Trigger webhook compress endpoint")
-			_, err := http.Get("http://localhost:3015/api/v1/compress" + proxyReq.URL.Path)
+			_, err := http.Get("http://192.168.1.247:3015/api/v1/compress" + proxyReq.URL.Path)
 			if err != nil {
 				log.Info("Error happen when hit webhook endpoint")
 				log.Info(err)
@@ -243,9 +244,9 @@ func (h *Handler) validateIncomingHeaders(req *http.Request) (string, string, er
 		return "", "", fmt.Errorf("Authorization header missing or set multiple times: %v", req)
 	}
 	match := awsAuthorizationCredentialRegexp.FindStringSubmatch(authorizationHeader[0])
-	// if len(match) != 3 {
-	// 	return "", "", fmt.Errorf("invalid Authorization header: Credential not found: %v", req)
-	// }
+	if len(match) != 3 {
+		return "", "", fmt.Errorf("invalid Authorization header: Credential not found: %v", req)
+	}
 	receivedAccessKeyID := match[1]
 	region := match[2]
 
