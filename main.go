@@ -10,8 +10,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	v4 "github.com/aws/aws-sdk-go/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/config"
+	cred "github.com/aws/aws-sdk-go-v2/credentials"
+
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 
@@ -83,13 +86,16 @@ func NewAwsS3ReverseProxy(opts Options) (*Handler, error) {
 		parsedAwsCredentials[d[0]] = d[1]
 	}
 
-	signers := make(map[string]*v4.Signer)
+	credentials := make(map[string]aws.Credentials)
 	for accessKeyID, secretAccessKey := range parsedAwsCredentials {
-		signers[accessKeyID] = v4.NewSigner(credentials.NewStaticCredentialsFromCreds(credentials.Value{
-			AccessKeyID:     accessKeyID,
-			SecretAccessKey: secretAccessKey,
-		}))
+		credentials[accessKeyID] = cred.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, "").Value
+		// signers[accessKeyID] = v4.NewSigner(credentials.NewStaticCredentialsFromCreds(credentials.Value{
+		// 	AccessKeyID:     accessKeyID,
+		// 	SecretAccessKey: secretAccessKey,
+		// }))
 	}
+
+	signer := v4.NewSigner()
 
 	handler := &Handler{
 		Debug:                 opts.Debug,
@@ -98,7 +104,8 @@ func NewAwsS3ReverseProxy(opts Options) (*Handler, error) {
 		AllowedSourceEndpoint: opts.AllowedSourceEndpoint,
 		AllowedSourceSubnet:   parsedAllowedSourceSubnet,
 		AWSCredentials:        parsedAwsCredentials,
-		Signers:               signers,
+		Signer:                signer,
+		Credentials:           credentials,
 	}
 	return handler, nil
 }
@@ -114,6 +121,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	config.WithClientLogMode(aws.LogRequestWithBody | aws.LogResponseWithBody)
 
 	if len(handler.UpstreamEndpoint) > 0 {
 		log.Infof("Sending requests to upstream AWS S3 to endpoint %s://%s.", handler.UpstreamScheme, handler.UpstreamEndpoint)

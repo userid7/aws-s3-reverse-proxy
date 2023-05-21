@@ -1,0 +1,28 @@
+ocalhost:9000 [REQUEST s3.PutObject] [2023-05-21T17:44:50.247] [Client IP: [::1]]
+localhost:9000 PUT /uncompressed/sample.tar
+localhost:9000 Proto: HTTP/1.1
+localhost:9000 Host: localhost:9000
+localhost:9000 Accept-Encoding: gzip
+localhost:9000 Content-Length: 5217397
+localhost:9000 X-Amz-Content-Sha256: 117adc52ab63c4ce6a602a589134596e3cac9c2c55228ee5191352f05ed02477
+localhost:9000 X-Amz-Date: 20230521T104450Z
+localhost:9000 X-Amz-Decoded-Content-Length: 5210112
+localhost:9000 Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230521/us-east-1/s3/aws4_request, SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=99714c17446ecd9c9230661b1385818780cded33694b758e9fc1920f0f5f754f
+localhost:9000 Content-Type: application/x-tar
+localhost:9000 User-Agent: MinIO (darwin; arm64) minio-go/v7.0.52 mc/RELEASE.2023-05-04T18-10-16Z
+localhost:9000 <BLOB>
+localhost:9000 [RESPONSE] [2023-05-21T17:44:50.267] [ Duration 19.83ms  ↑ 5.0 MiB  ↓ 0 B ]
+localhost:9000 200 OK
+localhost:9000 X-Content-Type-Options: nosniff
+localhost:9000 X-Xss-Protection: 1; mode=block
+localhost:9000 Content-Length: 0
+localhost:9000 Server: MinIO
+localhost:9000 Strict-Transport-Security: max-age=31536000; includeSubDomains
+localhost:9000 Vary: Origin,Accept-Encoding
+localhost:9000 X-Amz-Request-Id: 176122B39173A228
+localhost:9000 Accept-Ranges: bytes
+localhost:9000 Content-Security-Policy: block-all-mixed-content
+localhost:9000 ETag: "68f3de0b2d3e1ba9e7cad78b2a508534"
+localhost:9000 X-Amz-Id-2: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+localhost:9000 <BLOB>
+localhost:9000 
