@@ -52,12 +52,14 @@ type Handler struct {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Info("===========================================")
 	log.Info("METHOD : ", r.Method)
 	log.Info("URL PATH : ", r.URL.Path)
-	// log.Info("HEADER : ", r.Header)
+	log.Info("HEADER : ", r.Header)
 
 	//Read the content
 	rawBody, err := ioutil.ReadAll(r.Body)
+
 	if err != nil {
 		log.WithError(err).Error("unable to proxy request")
 		w.WriteHeader(http.StatusBadRequest)
@@ -80,8 +82,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// log.Info("HEADER PROXY : ", proxyReq.Header)
-
 	//Read the content
 	proxyBody, err := ioutil.ReadAll(proxyReq.Body)
 	if err != nil {
@@ -94,8 +94,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Restore the io.ReadCloser to it's original state
 	proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(proxyBody))
 
-	isBodyEqual := bytes.Equal(rawBody, proxyBody)
-	log.Info("Is body equal? ", isBodyEqual)
+	if proxyReq.Method == "PUT" {
+		isBodyEqual := bytes.Equal(rawBody, proxyBody)
+		log.Info("Is body equal? ", isBodyEqual)
+		len := len(rawBody)
+		log.Info("LEN : ", fmt.Sprint(len))
+		log.Info("ENCODING : ", r.TransferEncoding)
+		log.Info("FORM : ", r.ContentLength)
+
+		_ = os.WriteFile("./raw.tar", rawBody, 0644)
+		_ = os.WriteFile("./proxy.tar", proxyBody, 0644)
+	}
+
+	log.Info("HEADER PROXY : ", proxyReq.Header)
 
 	if !checkIfObjectEndpoint(proxyReq.URL.Path) {
 		log.Info("Direct Proxy to Object Storage")
@@ -118,7 +129,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Info("try to search in compress bucket")
 		originReqPath := proxyReq.URL.Path
 		alternativeProxyReq := proxyReq
-		alternateUrl := url.URL{Scheme: "http", Host: "192.168.1.247:3015", Path: "/api/v1/decompress" + originReqPath}
+		alternateUrl := url.URL{Scheme: "http", Host: "localhost:3015", Path: "/api/v1/decompress" + originReqPath}
 		alternativeProxyReq.URL = &alternateUrl
 		alternativeServerResponse, err := http.DefaultClient.Do(alternativeProxyReq)
 		if err != nil {
@@ -164,7 +175,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		queryParam := proxyReq.URL.Query()
 		if originServerResponse.StatusCode == 200 && ((proxyReq.Method == "PUT" && queryParam.Get("partNumber") == "") || (proxyReq.Method == "POST" && queryParam.Get("uploadId") != "")) {
 			log.Info("Trigger webhook compress endpoint")
-			_, err := http.Get("http://192.168.1.247:3015/api/v1/compress" + proxyReq.URL.Path)
+			_, err := http.Get("http://localhost:3015/api/v1/compress" + proxyReq.URL.Path)
 			if err != nil {
 				log.Info("Error happen when hit webhook endpoint")
 				log.Info(err)
@@ -204,7 +215,9 @@ func (h *Handler) signWithTime(signer *v4.Signer, req *http.Request, region stri
 		body = bytes.NewReader(b)
 	}
 
+	// signer.UnsignedPayload = true
 	_, err := signer.Sign(req, body, "s3", region, signTime)
+
 	return err
 }
 
@@ -305,6 +318,11 @@ func (h *Handler) assembleUpstreamReq(signer *v4.Signer, req *http.Request, regi
 	proxyURL.Host = upstreamEndpoint
 	proxyURL.RawPath = req.URL.Path
 	proxyReq, err := http.NewRequest(req.Method, proxyURL.String(), req.Body)
+
+	// if proxyReq.Method == "PUT" {
+	// 	proxyReq.Header.Set("X-Amz-Content-Sha256", "STREAMING-AWS4-HMAC-SHA256-PAYLOAD")
+	// }
+
 	if err != nil {
 		return nil, err
 	}
@@ -314,14 +332,26 @@ func (h *Handler) assembleUpstreamReq(signer *v4.Signer, req *http.Request, regi
 	if val, ok := req.Header["Content-Md5"]; ok {
 		proxyReq.Header["Content-Md5"] = val
 	}
+	// if val, ok := req.Header["X-Amz-Content-Sha256"]; ok {
+	// 	proxyReq.Header["X-Amz-Content-Sha256"] = val
+	// }
+	// if val, ok := req.Header["X-Amz-Decoded-Content-Length"]; ok {
+	// 	proxyReq.Header["X-Amz-Decoded-Content-Length"] = val
+	// }
+
+	log.Info("HEADER ANSEMBLE : ", proxyReq.Header)
 
 	// Sign the upstream request
 	if err := h.sign(signer, proxyReq, region); err != nil {
 		return nil, err
 	}
 
+	log.Info("HEADER ANSEMBLE SIGNED : ", proxyReq.Header)
+
 	// Add origin headers after request is signed (no overwrite)
 	copyHeaderWithoutOverwrite(proxyReq.Header, req.Header)
+
+	proxyReq.Header.Del("Accept-Encoding")
 
 	return proxyReq, nil
 }
