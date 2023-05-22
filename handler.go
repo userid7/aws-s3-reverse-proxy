@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"regexp"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -69,17 +68,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("HOST : ", r.Host)
 
-	//Read the content
-	rawBody, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Error("unable to proxy request")
-		w.WriteHeader(http.StatusBadRequest)
-	}
+	// //Read the content
+	// rawBody, err := ioutil.ReadAll(r.Body)
+	// if err != nil {
+	// 	log.WithError(err).Error("unable to proxy request")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// }
 
-	_ = os.WriteFile("./raw.tar", rawBody, 0644)
+	// _ = os.WriteFile("./raw.tar", rawBody, 0644)
 
-	// Restore the io.ReadCloser to it's original state
-	r.Body = ioutil.NopCloser(bytes.NewBuffer(rawBody))
+	// // Restore the io.ReadCloser to it's original state
+	// r.Body = ioutil.NopCloser(bytes.NewBuffer(rawBody))
 
 	proxyReq, err := h.buildUpstreamRequest2(r)
 	if err != nil {
@@ -93,29 +92,29 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Read the content
-	proxyBody, err := ioutil.ReadAll(proxyReq.Body)
-	if err != nil {
-		log.WithError(err).Error("unable to proxy request")
-		w.WriteHeader(http.StatusBadRequest)
-	}
+	// //Read the content
+	// proxyBody, err := ioutil.ReadAll(proxyReq.Body)
+	// if err != nil {
+	// 	log.WithError(err).Error("unable to proxy request")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// }
 
-	_ = os.WriteFile("./proxy.tar", proxyBody, 0644)
+	// _ = os.WriteFile("./proxy.tar", proxyBody, 0644)
 
-	// Restore the io.ReadCloser to it's original state
-	proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(proxyBody))
+	// // Restore the io.ReadCloser to it's original state
+	// proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(proxyBody))
 
-	if proxyReq.Method == "PUT" {
-		isBodyEqual := bytes.Equal(rawBody, proxyBody)
-		log.Info("Is body equal? ", isBodyEqual)
-		len := len(rawBody)
-		log.Info("LEN : ", fmt.Sprint(len))
-		log.Info("ENCODING : ", r.TransferEncoding)
-		log.Info("FORM : ", r.ContentLength)
+	// if proxyReq.Method == "PUT" {
+	// 	isBodyEqual := bytes.Equal(rawBody, proxyBody)
+	// 	log.Info("Is body equal? ", isBodyEqual)
+	// 	len := len(rawBody)
+	// 	log.Info("LEN : ", fmt.Sprint(len))
+	// 	log.Info("ENCODING : ", r.TransferEncoding)
+	// 	log.Info("FORM : ", r.ContentLength)
 
-		_ = os.WriteFile("./raw.tar", rawBody, 0644)
-		_ = os.WriteFile("./proxy.tar", proxyBody, 0644)
-	}
+	// 	_ = os.WriteFile("./raw.tar", rawBody, 0644)
+	// 	_ = os.WriteFile("./proxy.tar", proxyBody, 0644)
+	// }
 
 	log.Info("HEADER PROXY : ", proxyReq.Header)
 
@@ -137,7 +136,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Redirecting object endpoint
 	if r.Method == "HEAD" || r.Method == "GET" {
-		log.Info("try to search in compress bucket")
+		log.Info("try to search in compress engine")
 		originReqPath := proxyReq.URL.Path
 		alternativeProxyReq := proxyReq
 		alternateUrl := url.URL{Scheme: "http", Host: "localhost:3015", Path: "/api/v1/decompress" + originReqPath}
@@ -150,33 +149,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// log.Info("Alternative target hitted")
-		// log.Info(alternativeServerResponse.StatusCode)
-		// log.Info(alternativeProxyReq.Method)
-		// log.Info(alternativeProxyReq.URL)
-		// log.Info(alternativeServerResponse.Header)
-		// log.Info("REQ HEADER : ", alternativeProxyReq.Header)
-		// log.Info("RES HEADER : ", alternativeServerResponse.Header)
-
 		copyHeader(w.Header(), alternativeServerResponse.Header)
 		w.WriteHeader(alternativeServerResponse.StatusCode)
 		io.Copy(w, alternativeServerResponse.Body)
 		return
 	} else {
+		log.Info("Put Object to Storage Object")
 		originServerResponse, err := http.DefaultClient.Do(proxyReq)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = fmt.Fprint(w, err)
 			return
 		}
-
-		// return response to the client
-		// log.Info(originServerResponse.StatusCode)
-		// log.Info(proxyReq.Method)
-		// log.Info(proxyReq.URL)
-		// log.Info(proxyReq.Body)
-		// log.Info("REQ HEADER : ", proxyReq.Header)
-		// log.Info("RES HEADER : ", originServerResponse.Header)
 
 		copyHeader(w.Header(), originServerResponse.Header)
 		w.WriteHeader(originServerResponse.StatusCode)
