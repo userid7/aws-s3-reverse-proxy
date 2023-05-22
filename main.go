@@ -33,6 +33,7 @@ type Options struct {
 	Region                string
 	UpstreamInsecure      bool
 	UpstreamEndpoint      string
+	EngineEndpoint        string
 	CertFile              string
 	KeyFile               string
 }
@@ -50,6 +51,7 @@ func NewOptions() Options {
 	kingpin.Flag("aws-region", "send requests to this AWS S3 region (env - AWS_REGION)").Envar("AWS_REGION").Default("eu-central-1").StringVar(&opts.Region)
 	kingpin.Flag("upstream-insecure", "use insecure HTTP for upstream connections (env - UPSTREAM_INSECURE)").Envar("UPSTREAM_INSECURE").BoolVar(&opts.UpstreamInsecure)
 	kingpin.Flag("upstream-endpoint", "use this S3 endpoint for upstream connections, instead of public AWS S3 (env - UPSTREAM_ENDPOINT)").Envar("UPSTREAM_ENDPOINT").StringVar(&opts.UpstreamEndpoint)
+	kingpin.Flag("engine-endpoint", "use this as an engine endpoint (env - ENGINE_ENDPOINT)").Envar("ENGINE_ENDPOINT").StringVar(&opts.EngineEndpoint)
 	kingpin.Flag("cert-file", "path to the certificate file (env - CERT_FILE)").Envar("CERT_FILE").Default("").StringVar(&opts.CertFile)
 	kingpin.Flag("key-file", "path to the private key file (env - KEY_FILE)").Envar("KEY_FILE").Default("").StringVar(&opts.KeyFile)
 	kingpin.Parse()
@@ -101,6 +103,7 @@ func NewAwsS3ReverseProxy(opts Options) (*Handler, error) {
 		Debug:                 opts.Debug,
 		UpstreamScheme:        scheme,
 		UpstreamEndpoint:      opts.UpstreamEndpoint,
+		EngineEndpoint:        opts.EngineEndpoint,
 		AllowedSourceEndpoint: opts.AllowedSourceEndpoint,
 		AllowedSourceSubnet:   parsedAllowedSourceSubnet,
 		AWSCredentials:        parsedAwsCredentials,

@@ -139,7 +139,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Info("try to search in compress engine")
 		originReqPath := proxyReq.URL.Path
 		alternativeProxyReq := proxyReq
-		alternateUrl := url.URL{Scheme: "http", Host: "localhost:3015", Path: "/api/v1/decompress" + originReqPath}
+		alternateUrl := url.URL{Scheme: "http", Host: h.EngineEndpoint, Path: "/api/v1/decompress" + originReqPath}
 		alternativeProxyReq.URL = &alternateUrl
 		alternativeServerResponse, err := http.DefaultClient.Do(alternativeProxyReq)
 		if err != nil {
@@ -170,7 +170,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		queryParam := proxyReq.URL.Query()
 		if originServerResponse.StatusCode == 200 && ((proxyReq.Method == "PUT" && queryParam.Get("partNumber") == "") || (proxyReq.Method == "POST" && queryParam.Get("uploadId") != "")) {
 			log.Info("Trigger webhook compress endpoint")
-			_, err := http.Get("http://localhost:3015/api/v1/compress" + proxyReq.URL.Path)
+			_, err := http.Get("http://" + h.EngineEndpoint + "/api/v1/compress" + proxyReq.URL.Path)
 			if err != nil {
 				log.Info("Error happen when hit webhook endpoint")
 				log.Info(err)
