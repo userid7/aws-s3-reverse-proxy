@@ -80,7 +80,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// // Restore the io.ReadCloser to it's original state
 	// r.Body = ioutil.NopCloser(bytes.NewBuffer(rawBody))
 
-	proxyReq, err := h.buildUpstreamRequest2(r)
+	proxyReq, err := h.buildUpstreamRequest3(r)
 	if err != nil {
 		log.WithError(err).Error("unable to proxy request")
 		w.WriteHeader(http.StatusBadRequest)
@@ -117,6 +117,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// }
 
 	log.Info("HEADER PROXY : ", proxyReq.Header)
+	log.Info("HOST PROXY : ", proxyReq.Host)
 
 	if !checkIfObjectEndpoint(proxyReq.URL.Path) {
 		log.Info("Direct Proxy to Object Storage")
@@ -128,6 +129,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		fmt.Println("PROXY STATUS CODE : ", originServerResponse.StatusCode)
 		copyHeader(w.Header(), originServerResponse.Header)
 		w.WriteHeader(originServerResponse.StatusCode)
 		io.Copy(w, originServerResponse.Body)
@@ -146,6 +148,25 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Info("Error happen when hit alternative target")
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = fmt.Fprint(w, err)
+			return
+		}
+
+		fmt.Println("ENGINE STATUS CODE : ", alternativeServerResponse.StatusCode)
+
+		if alternativeServerResponse.StatusCode != 200 {
+			log.Info("Not found. try to direct request")
+			originServerResponse, err := http.DefaultClient.Do(proxyReq)
+			if err != nil {
+				log.WithError(err).Error("pproxy failed")
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = fmt.Fprint(w, err)
+				return
+			}
+
+			fmt.Println("PROXY STATUS CODE : ", originServerResponse.StatusCode)
+			copyHeader(w.Header(), originServerResponse.Header)
+			w.WriteHeader(originServerResponse.StatusCode)
+			io.Copy(w, originServerResponse.Body)
 			return
 		}
 
@@ -189,7 +210,9 @@ func copyHeader(dst, src http.Header) {
 }
 
 func checkIfObjectEndpoint(urlPath string) bool {
+	log.Info("URLPATH : ", urlPath)
 	p := strings.Split(urlPath, "/")
+	log.Info("P : ", p)
 	if len(p) != 3 {
 		return false
 	}
@@ -375,6 +398,12 @@ func (h *Handler) assembleUpstreamReq(signer *v4.Signer, credential aws.Credenti
 
 	log.Info("HEADER ANSEMBLE SIGNED : ", proxyReq.Header)
 
+	if val, ok := req.Header["Content-Type"]; ok {
+		proxyReq.Header["Content-Type"] = val
+	}
+	if val, ok := req.Header["Content-Md5"]; ok {
+		proxyReq.Header["Content-Md5"] = val
+	}
 	// Add origin headers after request is signed (no overwrite)
 	copyHeaderWithoutOverwrite(proxyReq.Header, req.Header)
 
@@ -403,6 +432,47 @@ func (h *Handler) assembleUpstreamReq2(signer *v4.Signer, credential aws.Credent
 	copyHeaderWithoutOverwrite(proxyReq.Header, req.Header)
 
 	proxyReq.Host = req.Host
+	// proxyReq.Header.Add("Host", "tn-verint-halo.hcp2kp2.intra.bca.co.id")
+
+	return proxyReq, nil
+}
+
+func (h *Handler) assembleUpstreamReq3(signer *v4.Signer, credential aws.Credentials, req *http.Request, region string) (*http.Request, error) {
+	upstreamEndpoint := h.UpstreamEndpoint
+	if len(upstreamEndpoint) == 0 {
+		upstreamEndpoint = fmt.Sprintf("s3.%s.amazonaws.com", region)
+		log.Infof("Using %s as upstream endpoint", upstreamEndpoint)
+	}
+
+	proxyURL := *req.URL
+	proxyURL.Scheme = h.UpstreamScheme
+	proxyURL.Host = upstreamEndpoint
+	proxyURL.RawPath = req.URL.Path
+	proxyReq, err := http.NewRequest(req.Method, proxyURL.String(), req.Body)
+
+	// if proxyReq.Method == "PUT" {
+	// 	proxyReq.Header.Set("X-Amz-Content-Sha256", "STREAMING-AWS4-HMAC-SHA256-PAYLOAD")
+	// }
+
+	if err != nil {
+		return nil, err
+	}
+
+	log.Info("HEADER ANSEMBLE : ", proxyReq.Header)
+
+	ctx := context.Background()
+
+	// Sign the upstream request
+	if err := h.sign(ctx, signer, credential, proxyReq, region); err != nil {
+		return nil, err
+	}
+
+	log.Info("HEADER ANSEMBLE SIGNED : ", proxyReq.Header)
+
+	// Add origin headers after request is signed (no overwrite)
+	copyHeaderWithoutOverwrite(proxyReq.Header, req.Header)
+
+	proxyReq.Header.Del("Accept-Encoding")
 
 	return proxyReq, nil
 }
@@ -410,10 +480,10 @@ func (h *Handler) assembleUpstreamReq2(signer *v4.Signer, credential aws.Credent
 // Do validates the incoming request and create a new request for an upstream server
 func (h *Handler) buildUpstreamRequest(req *http.Request) (*http.Request, error) {
 	// Ensure the request was sent from an allowed IP address
-	err := h.validateIncomingSourceIP(req)
-	if err != nil {
-		return nil, err
-	}
+	// err := h.validateIncomingSourceIP(req)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// Validate incoming headers and extract AWS_ACCESS_KEY_ID
 	accessKeyID, region, err := h.validateIncomingHeaders(req)
@@ -510,6 +580,65 @@ func (h *Handler) buildUpstreamRequest2(req *http.Request) (*http.Request, error
 
 	// Assemble a new upstream request
 	proxyReq, err := h.assembleUpstreamReq2(signer, credential, req, region)
+	if err != nil {
+		return nil, err
+	}
+
+	// Disable Go's "Transfer-Encoding: chunked" madness
+	proxyReq.ContentLength = req.ContentLength
+
+	if log.GetLevel() == log.DebugLevel {
+		proxyReqDump, _ := httputil.DumpRequest(proxyReq, false)
+		log.Debugf("Proxying request: %v", string(proxyReqDump))
+	}
+
+	return proxyReq, nil
+}
+
+// Do validates the incoming request and create a new request for an upstream server
+func (h *Handler) buildUpstreamRequest3(req *http.Request) (*http.Request, error) {
+	// Ensure the request was sent from an allowed IP address
+	err := h.validateIncomingSourceIP(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate incoming headers and extract AWS_ACCESS_KEY_ID
+	accessKeyID, region, err := h.validateIncomingHeaders(req)
+	if err != nil {
+		return nil, err
+	}
+
+	signer := h.Signer
+
+	// Get the AWS Signature signer for this AccessKey
+	credential := h.Credentials[accessKeyID]
+
+	// // Assemble a signed fake request to verify the incoming requests signature
+	// fakeReq, err := h.generateFakeIncomingRequest(signer, req, region)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// // Verify that the fake request and the incoming request have the same signature
+	// // This ensures it was sent and signed by a client with correct AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+	// cmpResult := subtle.ConstantTimeCompare([]byte(fakeReq.Header["Authorization"][0]), []byte(req.Header["Authorization"][0]))
+	// if cmpResult == 0 {
+	// 	v, _ := httputil.DumpRequest(fakeReq, false)
+	// 	log.Debugf("Fake request: %v", string(v))
+
+	// 	v, _ = httputil.DumpRequest(req, false)
+	// 	log.Debugf("Incoming request: %v", string(v))
+	// 	return nil, fmt.Errorf("invalid signature in Authorization header")
+	// }
+
+	if log.GetLevel() == log.DebugLevel {
+		initialReqDump, _ := httputil.DumpRequest(req, false)
+		log.Debugf("Initial request dump: %v", string(initialReqDump))
+	}
+
+	// Assemble a new upstream request
+	proxyReq, err := h.assembleUpstreamReq3(signer, credential, req, region)
 	if err != nil {
 		return nil, err
 	}
