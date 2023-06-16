@@ -1,0 +1,340 @@
+
+F:\Kerja\BCA\halo\simulation\result>mc cp sample_raw_2.tar myminio/uncompressed/sample.tar --debug
+mc: <DEBUG> GET /uncompressed/?location= HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
+X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+X-Amz-Date: 20230609T071330Z
+Accept-Encoding: gzip
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 128
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Content-Type: application/xml
+Date: Fri, 09 Jun 2023 07:13:30 GMT
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC323ABF2850
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  14.0432ms
+
+mc: <DEBUG> HEAD /uncompressed/sample.tar HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
+X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+X-Amz-Date: 20230609T071330Z
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 107557376
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Content-Type: application/x-tar
+Date: Fri, 09 Jun 2023 07:13:30 GMT
+Etag: "fa43cfd3783efd1bb43cbc74030dbeb5-7"
+Last-Modified: Fri, 09 Jun 2023 07:13:25 GMT
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC323B2C08F8
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  8.7359ms
+
+ 0 B / ? [                                                                                                           =]mc: <DEBUG> GET /uncompressed/?object-lock= HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
+X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+X-Amz-Date: 20230609T071330Z
+Accept-Encoding: gzip
+
+mc: <DEBUG> HTTP/1.1 404 Not Found
+Content-Length: 342
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Content-Type: application/xml
+Date: Fri, 09 Jun 2023 07:13:30 GMT
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC323BEFFEFC
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+<?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>ObjectLockConfigurationNotFoundError</Code><Message>Object Lock configuration does not exist for this bucket</Message><BucketName>uncompressed</BucketName><Resource>/uncompressed/</Resource><RequestId>1766EC323BEFFEFC</RequestId><HostId>90f00024-38c1-488b-b994-c90cc2f7687a</HostId></Error>mc: <DEBUG> Response Time:  13.8715ms
+
+mc: <DEBUG> HEAD /uncompressed/sample.tar HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
+X-Amz-Content-Sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+X-Amz-Date: 20230609T071331Z
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 107557376
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Content-Type: application/x-tar
+Date: Fri, 09 Jun 2023 07:13:31 GMT
+Etag: "fa43cfd3783efd1bb43cbc74030dbeb5-7"
+Last-Modified: Fri, 09 Jun 2023 07:13:25 GMT
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC323E5B7180
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  9.8898ms
+
+mc: <DEBUG> POST /uncompressed/sample.tar?uploads= HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Content-Length: 0
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request, SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
+Content-Type: application/x-tar
+X-Amz-Content-Sha256: UNSIGNED-PAYLOAD
+X-Amz-Date: 20230609T071331Z
+Accept-Encoding: gzip
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 319
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Content-Type: application/xml
+Date: Fri, 09 Jun 2023 07:13:31 GMT
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC323F42EB50
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  13.105ms
+
+...\sample_raw_2.tar: 44.75 MiB / 102.57 MiB [=========================>                                 ] 130.05 MiB/smc: <DEBUG> PUT /uncompressed/sample.tar?partNumber=4&uploadId=OTBmMDAwMjQtMzhjMS00ODhiLWI5OTQtYzkwY2MyZjc2ODdhLmM5ZGMyMWM2LTc4MzctNGNjZi1hMTY4LTk1NjllNWE1ZGI3YQ HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Content-Length: 16800342
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length,Signature=**REDACTED**
+X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+X-Amz-Date: 20230609T071331Z
+X-Amz-Decoded-Content-Length: 16777216
+Accept-Encoding: gzip
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 0
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Date: Fri, 09 Jun 2023 07:13:31 GMT
+Etag: "1ed3afdde01be549f90758eb30b1f87b"
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC3240DB74DC
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  473.071ms
+
+mc: <DEBUG> PUT /uncompressed/sample.tar?partNumber=2&uploadId=OTBmMDAwMjQtMzhjMS00ODhiLWI5OTQtYzkwY2MyZjc2ODdhLmM5ZGMyMWM2LTc4MzctNGNjZi1hMTY4LTk1NjllNWE1ZGI3YQ HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Content-Length: 16800342
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length,Signature=**REDACTED**
+X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+X-Amz-Date: 20230609T071331Z
+X-Amz-Decoded-Content-Length: 16777216
+Accept-Encoding: gzip
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 0
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Date: Fri, 09 Jun 2023 07:13:31 GMT
+Etag: "345bb4190436d8cb1d88428b7e2d9c8b"
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC3241094A10
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> PUT /uncompressed/sample.tar?partNumber=1&uploadId=OTBmMDAwMjQtMzhjMS00ODhiLWI5OTQtYzkwY2MyZjc2ODdhLmM5ZGMyMWM2LTc4MzctNGNjZi1hMTY4LTk1NjllNWE1ZGI3YQ HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Content-Length: 16800342
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length,Signature=**REDACTED**
+X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+X-Amz-Date: 20230609T071331Z
+X-Amz-Decoded-Content-Length: 16777216
+Accept-Encoding: gzip
+
+...\sample_raw_2.tar: 64.12 MiB / 102.57 MiB [====================================>                      ] 100.92 MiB/smc: <DEBUG> PUT /uncompressed/sample.tar?partNumber=3&uploadId=OTBmMDAwMjQtMzhjMS00ODhiLWI5OTQtYzkwY2MyZjc2ODdhLmM5ZGMyMWM2LTc4MzctNGNjZi1hMTY4LTk1NjllNWE1ZGI3YQ HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Content-Length: 16800342
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length,Signature=**REDACTED**
+X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+X-Amz-Date: 20230609T071331Z
+X-Amz-Decoded-Content-Length: 16777216
+Accept-Encoding: gzip
+
+mc: <DEBUG> Response Time:  573.9703ms
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 0
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Date: Fri, 09 Jun 2023 07:13:31 GMT
+Etag: "18d0a301d849c3395d5d7d22ed136858"
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC32404088B4
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 0
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Date: Fri, 09 Jun 2023 07:13:31 GMT
+Etag: "7c2658fd4007bc396442f8250502eb47"
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC32408F4300
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  722.6027ms
+
+mc: <DEBUG> Response Time:  667.5154ms
+
+...\sample_raw_2.tar: 89.31 MiB / 102.57 MiB [===================================================>       ] 112.29 MiB/smc: <DEBUG> PUT /uncompressed/sample.tar?partNumber=5&uploadId=OTBmMDAwMjQtMzhjMS00ODhiLWI5OTQtYzkwY2MyZjc2ODdhLmM5ZGMyMWM2LTc4MzctNGNjZi1hMTY4LTk1NjllNWE1ZGI3YQ HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Content-Length: 16800342
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length,Signature=**REDACTED**
+X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+X-Amz-Date: 20230609T071331Z
+X-Amz-Decoded-Content-Length: 16777216
+Accept-Encoding: gzip
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 0
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Date: Fri, 09 Jun 2023 07:13:31 GMT
+Etag: "0d37626a6b9f414542747faaff3b46ef"
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC325F894698
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  338.9646ms
+
+mc: <DEBUG> PUT /uncompressed/sample.tar?partNumber=7&uploadId=OTBmMDAwMjQtMzhjMS00ODhiLWI5OTQtYzkwY2MyZjc2ODdhLmM5ZGMyMWM2LTc4MzctNGNjZi1hMTY4LTk1NjllNWE1ZGI3YQ HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Content-Length: 6903705
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length,Signature=**REDACTED**
+X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+X-Amz-Date: 20230609T071331Z
+X-Amz-Decoded-Content-Length: 6894080
+Accept-Encoding: gzip
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 0
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Date: Fri, 09 Jun 2023 07:13:31 GMT
+Etag: "31701d125d721aa8c4c409364449aa07"
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC326BFC3FD4
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  194.6494ms
+
+mc: <DEBUG> PUT /uncompressed/sample.tar?partNumber=6&uploadId=OTBmMDAwMjQtMzhjMS00ODhiLWI5OTQtYzkwY2MyZjc2ODdhLmM5ZGMyMWM2LTc4MzctNGNjZi1hMTY4LTk1NjllNWE1ZGI3YQ HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Content-Length: 16800342
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-decoded-content-length,Signature=**REDACTED**
+X-Amz-Content-Sha256: STREAMING-AWS4-HMAC-SHA256-PAYLOAD
+X-Amz-Date: 20230609T071331Z
+X-Amz-Decoded-Content-Length: 16777216
+Accept-Encoding: gzip
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 0
+Accept-Ranges: bytes
+Content-Security-Policy: block-all-mixed-content
+Date: Fri, 09 Jun 2023 07:13:31 GMT
+Etag: "4a74c7bb5f2d5d7e87ac313592404c49"
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Amz-Request-Id: 1766EC3263AEAC2C
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  361.3572ms
+
+...\sample_raw_2.tar: 102.57 MiB / 102.57 MiB [===========================================================] 99.63 MiB/smc: <DEBUG> POST /uncompressed/sample.tar?uploadId=OTBmMDAwMjQtMzhjMS00ODhiLWI5OTQtYzkwY2MyZjc2ODdhLmM5ZGMyMWM2LTc4MzctNGNjZi1hMTY4LTk1NjllNWE1ZGI3YQ HTTP/1.1
+Host: localhost:9000
+User-Agent: MinIO (windows; amd64) minio-go/v7.0.46 mc/RELEASE.2023-01-11T03-14-16Z
+Content-Length: 687
+Authorization: AWS4-HMAC-SHA256 Credential=minioadmin/20230609/us-east-1/s3/aws4_request, SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=**REDACTED**
+Content-Type: application/octet-stream
+X-Amz-Content-Sha256: 685ddadd3bf34269bac2cd278991f0d44013854c8beb0922932cd945c069c6da
+X-Amz-Date: 20230609T071332Z
+Accept-Encoding: gzip
+
+mc: <DEBUG> HTTP/1.1 200 OK
+Content-Length: 323
+Accept-Ranges: bytes
+Cache-Control: no-cache
+Content-Security-Policy: block-all-mixed-content
+Content-Type: application/xml
+Date: Fri, 09 Jun 2023 07:13:32 GMT
+Etag: "fa43cfd3783efd1bb43cbc74030dbeb5-7"
+Server: MinIO
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Vary: Origin
+Vary: Accept-Encoding
+X-Accel-Buffering: no
+X-Amz-Request-Id: 1766EC327927CE30
+X-Content-Type-Options: nosniff
+X-Xss-Protection: 1; mode=block
+
+mc: <DEBUG> Response Time:  39.1367ms
+
+...\sample_raw_2.tar: 102.57 MiB / 102.57 MiB [========================================================] 95.73 MiB/s 1s
+F:\Kerja\BCA\halo\simulation\result>

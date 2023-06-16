@@ -68,18 +68,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("HOST : ", r.Host)
 
-	// //Read the content
-	// rawBody, err := ioutil.ReadAll(r.Body)
-	// if err != nil {
-	// 	log.WithError(err).Error("unable to proxy request")
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// }
-
-	// _ = os.WriteFile("./raw.tar", rawBody, 0644)
-
-	// // Restore the io.ReadCloser to it's original state
-	// r.Body = ioutil.NopCloser(bytes.NewBuffer(rawBody))
-
 	proxyReq, err := h.buildUpstreamRequest3(r)
 	if err != nil {
 		log.WithError(err).Error("unable to proxy request")
@@ -91,30 +79,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	// //Read the content
-	// proxyBody, err := ioutil.ReadAll(proxyReq.Body)
-	// if err != nil {
-	// 	log.WithError(err).Error("unable to proxy request")
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// }
-
-	// _ = os.WriteFile("./proxy.tar", proxyBody, 0644)
-
-	// // Restore the io.ReadCloser to it's original state
-	// proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(proxyBody))
-
-	// if proxyReq.Method == "PUT" {
-	// 	isBodyEqual := bytes.Equal(rawBody, proxyBody)
-	// 	log.Info("Is body equal? ", isBodyEqual)
-	// 	len := len(rawBody)
-	// 	log.Info("LEN : ", fmt.Sprint(len))
-	// 	log.Info("ENCODING : ", r.TransferEncoding)
-	// 	log.Info("FORM : ", r.ContentLength)
-
-	// 	_ = os.WriteFile("./raw.tar", rawBody, 0644)
-	// 	_ = os.WriteFile("./proxy.tar", proxyBody, 0644)
-	// }
 
 	log.Info("HEADER PROXY : ", proxyReq.Header)
 	log.Info("HOST PROXY : ", proxyReq.Host)
@@ -129,7 +93,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fmt.Println("PROXY STATUS CODE : ", originServerResponse.StatusCode)
+		log.Info("PROXY STATUS CODE : ", originServerResponse.StatusCode)
 		copyHeader(w.Header(), originServerResponse.Header)
 		w.WriteHeader(originServerResponse.StatusCode)
 		io.Copy(w, originServerResponse.Body)
@@ -151,28 +115,27 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fmt.Println("ENGINE STATUS CODE : ", alternativeServerResponse.StatusCode)
+		log.Info("ENGINE STATUS CODE : ", alternativeServerResponse.StatusCode)
 
-		if alternativeServerResponse.StatusCode != 200 {
-			log.Info("Not found. try to direct request")
-			originServerResponse, err := http.DefaultClient.Do(proxyReq)
-			if err != nil {
-				log.WithError(err).Error("pproxy failed")
-				w.WriteHeader(http.StatusInternalServerError)
-				_, _ = fmt.Fprint(w, err)
-				return
-			}
-
-			fmt.Println("PROXY STATUS CODE : ", originServerResponse.StatusCode)
-			copyHeader(w.Header(), originServerResponse.Header)
-			w.WriteHeader(originServerResponse.StatusCode)
-			io.Copy(w, originServerResponse.Body)
+		if alternativeServerResponse.StatusCode == 200  || alternativeServerResponse.StatusCode == 404 {
+			copyHeader(w.Header(), alternativeServerResponse.Header)
+			w.WriteHeader(alternativeServerResponse.StatusCode)
+			io.Copy(w, alternativeServerResponse.Body)
 			return
 		}
 
-		copyHeader(w.Header(), alternativeServerResponse.Header)
-		w.WriteHeader(alternativeServerResponse.StatusCode)
-		io.Copy(w, alternativeServerResponse.Body)
+		log.Info("Not found. try to direct request")
+		originServerResponse, err := http.DefaultClient.Do(proxyReq)
+		if err != nil {
+			log.WithError(err).Error("pproxy failed")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = fmt.Fprint(w, err)
+			return
+		}
+		log.Info("PROXY STATUS CODE : ", originServerResponse.StatusCode)
+		copyHeader(w.Header(), originServerResponse.Header)
+		w.WriteHeader(originServerResponse.StatusCode)
+		io.Copy(w, originServerResponse.Body)
 		return
 	} else {
 		log.Info("Put Object to Storage Object")
@@ -211,12 +174,19 @@ func copyHeader(dst, src http.Header) {
 
 func checkIfObjectEndpoint(urlPath string) bool {
 	log.Info("URLPATH : ", urlPath)
-	p := strings.Split(urlPath, "/")
-	log.Info("P : ", p)
-	if len(p) != 3 {
-		return false
+	paths := strings.Split(urlPath, "/")
+	log.Info("PATHS : ", paths)
+	count := 0
+
+	for _, path := range(paths) {
+		if path != "" {
+			count += 1
+		}
 	}
-	return p[1] != "" && p[2] != ""
+	
+	// If count == 1 its bucket endpoint
+	// else it object endpoint
+	return count > 1
 }
 
 func (h *Handler) sign(ctx context.Context, signer *v4.Signer, credential aws.Credentials, req *http.Request, region string) error {
@@ -224,24 +194,6 @@ func (h *Handler) sign(ctx context.Context, signer *v4.Signer, credential aws.Cr
 }
 
 func (h *Handler) signWithTime(ctx context.Context, signer *v4.Signer, credential aws.Credentials, req *http.Request, region string, signTime time.Time) error {
-	// body := bytes.NewReader([]byte{})
-	// if req.Body != nil {
-	// 	b, err := ioutil.ReadAll(req.Body)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	body = bytes.NewReader(b)
-	// }
-
-	// signer.UnsignedPayload = true
-	// _, err := signer.Sign(req, body, "s3", region, signTime)
-
-	// if _, ok := req.Header["X-Amz-Content-Sha256"]; ok {
-	// 	hash = req.Header.Get("X-Amz-Content-Sha256")
-	// } else {
-	// 	hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	// }
-
 	//Read the content
 	rawBody, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -367,10 +319,6 @@ func (h *Handler) assembleUpstreamReq(signer *v4.Signer, credential aws.Credenti
 	proxyURL.RawPath = req.URL.Path
 	proxyReq, err := http.NewRequest(req.Method, proxyURL.String(), req.Body)
 
-	// if proxyReq.Method == "PUT" {
-	// 	proxyReq.Header.Set("X-Amz-Content-Sha256", "STREAMING-AWS4-HMAC-SHA256-PAYLOAD")
-	// }
-
 	if err != nil {
 		return nil, err
 	}
@@ -380,12 +328,6 @@ func (h *Handler) assembleUpstreamReq(signer *v4.Signer, credential aws.Credenti
 	if val, ok := req.Header["Content-Md5"]; ok {
 		proxyReq.Header["Content-Md5"] = val
 	}
-	// if val, ok := req.Header["X-Amz-Content-Sha256"]; ok {
-	// 	proxyReq.Header["X-Amz-Content-Sha256"] = val
-	// }
-	// if val, ok := req.Header["X-Amz-Decoded-Content-Length"]; ok {
-	// 	proxyReq.Header["X-Amz-Decoded-Content-Length"] = val
-	// }
 
 	log.Info("HEADER ANSEMBLE : ", proxyReq.Header)
 
@@ -432,7 +374,6 @@ func (h *Handler) assembleUpstreamReq2(signer *v4.Signer, credential aws.Credent
 	copyHeaderWithoutOverwrite(proxyReq.Header, req.Header)
 
 	proxyReq.Host = req.Host
-	// proxyReq.Header.Add("Host", "tn-verint-halo.hcp2kp2.intra.bca.co.id")
 
 	return proxyReq, nil
 }
@@ -449,10 +390,6 @@ func (h *Handler) assembleUpstreamReq3(signer *v4.Signer, credential aws.Credent
 	proxyURL.Host = upstreamEndpoint
 	proxyURL.RawPath = req.URL.Path
 	proxyReq, err := http.NewRequest(req.Method, proxyURL.String(), req.Body)
-
-	// if proxyReq.Method == "PUT" {
-	// 	proxyReq.Header.Set("X-Amz-Content-Sha256", "STREAMING-AWS4-HMAC-SHA256-PAYLOAD")
-	// }
 
 	if err != nil {
 		return nil, err
@@ -597,11 +534,11 @@ func (h *Handler) buildUpstreamRequest2(req *http.Request) (*http.Request, error
 
 // Do validates the incoming request and create a new request for an upstream server
 func (h *Handler) buildUpstreamRequest3(req *http.Request) (*http.Request, error) {
-	// Ensure the request was sent from an allowed IP address
-	err := h.validateIncomingSourceIP(req)
-	if err != nil {
-		return nil, err
-	}
+	// // Ensure the request was sent from an allowed IP address
+	// err := h.validateIncomingSourceIP(req)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// Validate incoming headers and extract AWS_ACCESS_KEY_ID
 	accessKeyID, region, err := h.validateIncomingHeaders(req)
@@ -613,24 +550,6 @@ func (h *Handler) buildUpstreamRequest3(req *http.Request) (*http.Request, error
 
 	// Get the AWS Signature signer for this AccessKey
 	credential := h.Credentials[accessKeyID]
-
-	// // Assemble a signed fake request to verify the incoming requests signature
-	// fakeReq, err := h.generateFakeIncomingRequest(signer, req, region)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// // Verify that the fake request and the incoming request have the same signature
-	// // This ensures it was sent and signed by a client with correct AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
-	// cmpResult := subtle.ConstantTimeCompare([]byte(fakeReq.Header["Authorization"][0]), []byte(req.Header["Authorization"][0]))
-	// if cmpResult == 0 {
-	// 	v, _ := httputil.DumpRequest(fakeReq, false)
-	// 	log.Debugf("Fake request: %v", string(v))
-
-	// 	v, _ = httputil.DumpRequest(req, false)
-	// 	log.Debugf("Incoming request: %v", string(v))
-	// 	return nil, fmt.Errorf("invalid signature in Authorization header")
-	// }
 
 	if log.GetLevel() == log.DebugLevel {
 		initialReqDump, _ := httputil.DumpRequest(req, false)
