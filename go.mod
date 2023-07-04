@@ -10,6 +10,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 go 1.16

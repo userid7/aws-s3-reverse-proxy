@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // Options for aws-s3-reverse-proxy command line arguments
@@ -61,6 +62,13 @@ func NewOptions() Options {
 // NewAwsS3ReverseProxy parses all options and creates a new HTTP Handler
 func NewAwsS3ReverseProxy(opts Options) (*Handler, error) {
 	log.SetLevel(log.InfoLevel)
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   "./logs/proxy.log",
+		MaxSize:    500, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28, //days
+	})
+
 	if opts.Debug {
 		log.SetLevel(log.DebugLevel)
 	}

@@ -61,6 +61,7 @@ type Handler struct {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Info()
 	log.Info("===========================================")
 	log.Info("METHOD : ", r.Method)
 	log.Info("URL PATH : ", r.URL.Path)
